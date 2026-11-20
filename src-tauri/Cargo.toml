@@ -1,0 +1,17 @@
+[package]
+name = "trimly"
+version = "0.1.0"
+description = "Clip a section of any video link and download only that part"
+edition = "2021"
+
+[lib]
+name = "trimly_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+trimly-engine = { path = "../crates/engine" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"

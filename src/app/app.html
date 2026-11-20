@@ -1,0 +1,478 @@
+<div class="app">
+  <header class="bar">
+    <button type="button" class="brand" (click)="screen() === 'busy' ? null : changeVideo()" aria-label="Trimly home">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#C2410C" /><path d="M12 8H9v12h3M16 8h3v12h-3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      Trimly
+    </button>
+    <nav class="nav" aria-label="Main">
+      <button type="button" [class.a]="screen() !== 'queue' && screen() !== 'settings'" (click)="goClip()">Clip</button>
+      <button type="button" [class.a]="screen() === 'queue'" (click)="screen.set('queue')">Queue @if (queue.openCount()) { <span class="badge">{{ queue.openCount() }}</span> }</button>
+    </nav>
+    <span class="sp"></span>
+    @if (tools(); as t) {
+      @if (missing().length) {
+        <span class="chip bad">{{ missing().length }} tool{{ missing().length > 1 ? 's' : '' }} missing</span>
+      } @else {
+        <span class="chip ok">{{ isWeb() ? 'Server ready' : 'yt-dlp and ffmpeg ready' }}</span>
+      }
+    }
+    @if (isDemo()) { <span class="chip neu" title="No Trimly server is connected, so downloads are simulated.">Demo mode</span> }
+    <button type="button" class="ib themebtn" [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" [attr.title]="themeService.theme() === 'dark' ? 'Light theme' : 'Dark theme'" (click)="themeService.toggle()">
+      @if (themeService.theme() === 'dark') {
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></svg>
+      } @else {
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" /></svg>
+      }
+    </button>
+    <button type="button" class="ib" aria-label="Settings" [disabled]="screen() === 'busy'" (click)="openSettings()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
+    </button>
+  </header>
+
+  @if (!ready()) {
+    <main class="main center-all" role="status"><span class="spinner dark" aria-hidden="true"></span><span class="hint">Connecting…</span></main>
+  } @else if (backend.locked()) {
+    <!-- ================= Access key ================= -->
+    <main class="main center-all">
+      <form class="card lockcard" (ngSubmit)="submitKey()">
+        <h1 class="h2">Enter the access key</h1>
+        <p class="hint" style="margin: 0">This Trimly server is private. Ask whoever runs it for the key.</p>
+        <label class="sr" for="key">Access key</label>
+        <input id="key" name="key" type="password" class="in" autocomplete="current-password" placeholder="Access key" [ngModel]="keyInput()" (ngModelChange)="keyInput.set($event)" />
+        @if (keyError()) { <p class="err" role="alert" style="margin: 0">{{ keyError() }}</p> }
+        <button type="submit" class="btn pri">Unlock</button>
+      </form>
+    </main>
+  } @else if (screen() === 'settings') {
+    <!-- ================= Settings ================= -->
+    <main class="main scroll">
+      <div class="row"><h1 class="h2">Settings</h1></div>
+      <section class="card stack">
+        <h2 class="h3">Downloads</h2>
+        <div class="g2">
+          @if (!isWeb()) {
+          <div>
+            <label class="lbl" for="s-folder">Default folder</label>
+            <div class="row"><input id="s-folder" class="in" [value]="draft().folder" (input)="patch({ folder: $any($event.target).value })" /><button type="button" class="btn" (click)="chooseDraftFolder()">Choose</button></div>
+          </div>
+          }
+          <div>
+            <label class="lbl" for="s-q">Default quality</label>
+            <select id="s-q" class="in" (change)="patch({ quality: qualityValue($any($event.target).value) })">
+              @for (q of qualities; track q.label) { <option [value]="q.value ?? 'best'" [selected]="q.value === draft().quality">{{ q.label }}</option> }
+            </select>
+          </div>
+        </div>
+        @if (!isWeb()) {
+        <div>
+          <label class="lbl" for="s-t">File name</label>
+          <input id="s-t" class="in mono" [value]="draft().template" (input)="patch({ template: $any($event.target).value })" />
+          <p class="hint">Trimly adds the file extension. Leave blank for <code>{{ defaultTemplate }}</code>.</p>
+        </div>
+        }
+      </section>
+      <section class="card stack">
+        <h2 class="h3">Queue</h2>
+        <div class="line">
+          <span><label for="s-n"><b>Clips at the same time</b></label><br /><span class="hint">More at once uses more bandwidth and processing power.</span></span>
+          <select id="s-n" class="in narrow" (change)="patch({ concurrent: +$any($event.target).value })">
+            @for (n of [1, 2, 3, 4]; track n) { <option [value]="n" [selected]="draft().concurrent === n">{{ n }}</option> }
+          </select>
+        </div>
+      </section>
+      <section class="card stack">
+        <h2 class="h3">Speed</h2>
+        <div class="line">
+          <span><label for="s-p"><b>Download in parts</b></label><br /><span class="hint">Long video clips are split into parts that download at the same time, then joined. This is much faster, and lets you pause and resume. It works when exact cuts are on. Choose 1 to turn it off.</span></span>
+          <select id="s-p" class="in narrow" (change)="patch({ parts: +$any($event.target).value })">
+            @for (n of [1, 2, 3, 4, 6, 8]; track n) { <option [value]="n" [selected]="draft().parts === n">{{ n === 1 ? 'Off' : n + ' at once' }}</option> }
+          </select>
+        </div>
+      </section>
+      <section class="card stack">
+        <h2 class="h3">Clip accuracy</h2>
+        <label class="line">
+          <span><b>Cut exactly at my start and end times</b><br /><span class="hint">Re-encodes a few seconds around each cut so the clip starts and ends where you chose. Slightly slower.</span></span>
+          <input type="checkbox" class="switch" [checked]="draft().exact" (change)="patch({ exact: $any($event.target).checked })" />
+        </label>
+        @if (!isWeb()) {
+        <div class="line">
+          <span><label for="s-c"><b>Use my browser's sign-in for private videos</b></label><br /><span class="hint">Lets age-restricted and members-only videos download. Reads cookies from the browser you pick.</span></span>
+          <select id="s-c" class="in narrow" (change)="patch({ cookies: $any($event.target).value })">
+            <option value="" [selected]="!draft().cookies">Off</option>
+            @for (b of browsers; track b) { <option [value]="b" [selected]="draft().cookies === b">{{ b }}</option> }
+          </select>
+        </div>
+        }
+      </section>
+      @if (!isWeb()) {
+      <section class="card stack">
+        <h2 class="h3">Tools</h2>
+        <p class="hint" style="margin: 0">Leave blank to find them automatically.</p>
+        <div class="g2">
+          <div>
+            <label class="lbl" for="s-y">yt-dlp path</label>
+            <input id="s-y" class="in mono" [value]="draft().ytdlpPath" placeholder="Automatic" (input)="patch({ ytdlpPath: $any($event.target).value })" />
+            <p class="hint" [class.okc]="tools()?.ytdlp">{{ tools()?.ytdlp ? 'Found · ' + tools()?.ytdlp : 'Not found' }}</p>
+          </div>
+          <div>
+            <label class="lbl" for="s-f">ffmpeg path</label>
+            <input id="s-f" class="in mono" [value]="draft().ffmpegPath" placeholder="Automatic" (input)="patch({ ffmpegPath: $any($event.target).value })" />
+            <p class="hint" [class.okc]="tools()?.ffmpeg">{{ tools()?.ffmpeg ? 'Found · ' + tools()?.ffmpeg : 'Not found' }}</p>
+          </div>
+        </div>
+      </section>
+      }
+      <div class="row end"><button type="button" class="btn" (click)="closeSettings()">Cancel</button><button type="button" class="btn pri" (click)="saveSettings()">Save settings</button></div>
+    </main>
+  } @else if (needsSetup() && isWeb()) {
+    <!-- ================= Server not set up ================= -->
+    <main class="main">
+      <div>
+        <h1 class="h2">This server isn't ready yet</h1>
+        <p class="sub">The server is missing {{ missing().join(' and ') }}. Whoever runs it needs to install {{ missing().length > 1 ? 'them' : 'it' }}. The Docker image for Trimly includes both.</p>
+      </div>
+      <div class="row end" style="margin-top: auto"><button type="button" class="btn pri" [disabled]="toolsChecking()" (click)="recheckTools()">{{ toolsChecking() ? 'Checking…' : 'Check again' }}</button></div>
+    </main>
+  } @else if (needsSetup()) {
+    <!-- ================= Tools missing ================= -->
+    <main class="main">
+      <div>
+        <h1 class="h2">One more thing before you start</h1>
+        <p class="sub">Trimly uses two free tools to read links and cut video. Install the missing {{ missing().length > 1 ? 'ones' : 'one' }}, then check again.</p>
+      </div>
+      <section class="card row" style="gap: 14px">
+        <span class="dot" [class.good]="tools()?.ffmpeg" [class.bad2]="!tools()?.ffmpeg">{{ tools()?.ffmpeg ? '✓' : '✕' }}</span>
+        <div class="grow"><b>ffmpeg</b><div class="hint mono">{{ tools()?.ffmpeg ?? 'Not found' }}</div></div>
+      </section>
+      <section class="card">
+        <div class="row" style="gap: 14px">
+          <span class="dot" [class.good]="tools()?.ytdlp" [class.bad2]="!tools()?.ytdlp">{{ tools()?.ytdlp ? '✓' : '✕' }}</span>
+          <div class="grow"><b>yt-dlp</b><div class="hint">{{ tools()?.ytdlp ? 'Found · ' + tools()?.ytdlp : 'Not found on this computer.' }}</div></div>
+        </div>
+        <div class="install">
+          <div class="os">macOS</div><pre class="code">brew install yt-dlp ffmpeg</pre>
+          <div class="os">Windows</div><pre class="code">winget install yt-dlp.yt-dlp Gyan.FFmpeg</pre>
+          <div class="os">Linux</div><pre class="code">pipx install yt-dlp   # and: sudo apt install ffmpeg</pre>
+        </div>
+      </section>
+      <div class="row end" style="margin-top: auto">
+        <span class="hint grow">Already installed somewhere unusual? Set the path in Settings.</span>
+        <button type="button" class="btn" (click)="openSettings()">Open Settings</button>
+        <button type="button" class="btn pri" [disabled]="toolsChecking()" (click)="recheckTools()">{{ toolsChecking() ? 'Checking…' : 'Check again' }}</button>
+      </div>
+    </main>
+  } @else {
+    @switch (screen()) {
+      @case ('start') {
+        <!-- ================= Start ================= -->
+        <main class="main">
+          <div class="hero">
+            <h1>Keep the part you want.<br />Skip the rest.</h1>
+            <p class="sub">Paste a video link, pick a start and end, and download only that clip.</p>
+          </div>
+          <form class="narrowcol" (ngSubmit)="load()">
+            <div class="row">
+              <label class="sr" for="url">Video link</label>
+              <input id="url" name="url" class="in big grow" placeholder="https://www.youtube.com/watch?v=…" [ngModel]="url()" (ngModelChange)="url.set($event)" [attr.aria-invalid]="urlError() ? true : null" autocomplete="off" />
+              <button type="submit" class="btn pri big" [disabled]="loading()">
+                @if (loading()) { <span class="spinner" aria-hidden="true"></span> }
+                {{ loading() ? 'Loading…' : 'Load video' }}
+              </button>
+            </div>
+            @if (loading()) {
+              <div class="loadcard" role="status" aria-live="polite">
+                <div class="skel thumbsk"></div>
+                <div class="grow">
+                  <div class="skel line w60"></div>
+                  <div class="skel line w35"></div>
+                  <div class="loadmsg"><span class="spinner dark" aria-hidden="true"></span>Reading the link and finding the video…</div>
+                </div>
+              </div>
+            }
+            @if (urlError()) { <p class="err" role="alert">{{ urlError() }}</p> }
+            <p class="hint center">Works with YouTube, Vimeo, Twitch, X and more than a thousand other sites.</p>
+          </form>
+          @if (!isWeb() && store.recents().length) {
+            <section class="card narrowcol flush">
+              <div class="row pad"><b class="grow">Recent clips</b><button type="button" class="link" (click)="store.clearRecents()">Clear list</button></div>
+              @for (c of store.recents(); track c.file) {
+                <div class="li">
+                  <div class="th"></div>
+                  <div class="grow minw"><div class="trunc"><b>{{ c.title }}</b></div><div class="hint mono">{{ clipLabel(c) }}</div></div>
+                  <button type="button" class="ib" [attr.aria-label]="'Show ' + c.title + ' in folder'" (click)="reveal(c.file)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+                  </button>
+                </div>
+              }
+            </section>
+          }
+        </main>
+      }
+
+      @case ('loaded') {
+        <!-- ================= Select the clip ================= -->
+        <main class="main scroll">
+          @if (failureView(); as f) {
+            <div class="alert" role="alert">
+              <div class="grow">
+                <b>{{ f.title }}</b>
+                <div>{{ f.body }}</div>
+                <div class="raw mono">{{ f.raw }}</div>
+                <div class="row" style="margin-top: 12px">
+                  <button type="button" class="btn pri sm" (click)="download()">Try again</button>
+                  @if (f.signIn) { <button type="button" class="btn sm" (click)="openSettings()">Open Settings</button> }
+                </div>
+              </div>
+            </div>
+          }
+          <div class="row">
+            <input class="in grow" [value]="url()" readonly aria-label="Video link" />
+            <button type="button" class="btn" (click)="changeVideo()">Change</button>
+          </div>
+          @if (info(); as i) {
+            <section class="card row" style="gap: 16px">
+              <div class="thumb">
+                @if (i.thumbnail) { <img [src]="i.thumbnail" alt="" /> } @else { <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg> }
+              </div>
+              <div class="grow minw">
+                <div class="row" style="gap: 10px"><span class="title">{{ i.title }}</span>@if (i.isLive) { <span class="chip live">LIVE</span> }</div>
+                <div class="hint">{{ i.uploader ?? 'Unknown channel' }}{{ i.duration ? ' · ' + fmt(i.duration) : ' · live now' }}</div>
+              </div>
+            </section>
+
+            <section class="card">
+              @if (i.duration) {
+                <div class="row"><b class="grow">Select the part to keep</b><span class="hint">Drag the orange handles or type exact times</span></div>
+                <div class="pvrow">
+                  <div class="pvcol">
+                    <app-preview [src]="previewSrc()" [thumbnail]="i.thumbnail" [loading]="previewLoading()" [start]="start()" [end]="end()" [clock]="longClock()" [(time)]="previewTime" />
+                  </div>
+                  <div class="pvhelp">
+                    <b>Preview</b>
+                    <p class="hint" style="margin: 4px 0 0">Move over the timeline, or drag a handle, to look at that moment. Use Play clip to watch just the part you picked.</p>
+                    <p class="hint" style="margin: 8px 0 0">Zoom in on the timeline with the + button or Ctrl and the mouse wheel, for exact cuts.</p>
+                  </div>
+                </div>
+                <app-timeline [duration]="i.duration" [(start)]="start" [(end)]="end" [playhead]="previewSrc() ? previewTime() : null" (scrub)="previewTime.set($event)" />
+              } @else {
+                <b>Pick the part to keep</b>
+                <div class="note">Live streams have no timeline. Times count from the start of the stream.</div>
+              }
+              <div class="times">
+                <div><label class="lbl c" for="t-s">Start</label><input id="t-s" class="in time" [value]="fmt(start())" (change)="setTime('start', $any($event.target).value, $any($event.target))" /></div>
+                <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                <div><label class="lbl c" for="t-e">End</label><input id="t-e" class="in time" [value]="fmt(end())" (change)="setTime('end', $any($event.target).value, $any($event.target))" /></div>
+                <div class="len">Clip length <span class="mono">{{ fmt(length()) }}</span></div>
+              </div>
+              @if (timeError()) { <p class="err center" role="alert">{{ timeError() }}</p> }
+            </section>
+
+            @if (kind() === 'video') {
+              <section class="card">
+                <div class="row"><b class="grow">Frame</b><span class="hint">Crop for reels, shorts and posts</span></div>
+                <div class="seg frames" role="group" aria-label="Frame shape">
+                  @for (f of frames; track f.id) {
+                    <button type="button" [class.a]="frame() === f.id" [attr.aria-pressed]="frame() === f.id" (click)="setFrame(f.id)">{{ f.label }}</button>
+                  }
+                </div>
+                @if (cropRatio()) {
+                  <div class="cropwrap">
+                    <div class="cropstage"><app-crop-editor [sourceAspect]="sourceAspect()" [ratio]="cropRatio()" [thumbnail]="i.thumbnail" [(px)]="cropX" [(py)]="cropY" /></div>
+                    <div class="cropinfo">
+                      <p class="hint" style="margin: 0">{{ frameDef().hint }}. Drag the box to choose what stays in the picture.</p>
+                      @if (outputSize()) { <div class="outsize"><span class="lbl">Output size</span><span class="mono">{{ outputSize() }}</span></div> }
+                      <p class="hint" style="margin: 0">Cropping re-encodes the clip, so it takes a little longer than a plain trim.</p>
+                    </div>
+                  </div>
+                }
+              </section>
+            }
+
+            <div class="row opts">
+              <div>
+                <span class="lbl" id="fmt-l">Format</span>
+                <div class="seg" role="group" aria-labelledby="fmt-l">
+                  <button type="button" [class.a]="kind() === 'video'" [attr.aria-pressed]="kind() === 'video'" (click)="kind.set('video')">Video</button>
+                  <button type="button" [class.a]="kind() === 'audio'" [attr.aria-pressed]="kind() === 'audio'" (click)="kind.set('audio')">Audio</button>
+                </div>
+              </div>
+              <div>
+                @if (kind() === 'video') {
+                  <label class="lbl" for="q">Quality</label>
+                  <select id="q" class="in w140" (change)="quality.set(qualityValue($any($event.target).value))">
+                    @for (q of qualities; track q.label) { <option [value]="q.value ?? 'best'" [selected]="q.value === quality()">{{ q.label }}</option> }
+                  </select>
+                } @else {
+                  <label class="lbl" for="af">Audio format</label>
+                  <select id="af" class="in w140" (change)="audioFormat.set($any($event.target).value)">
+                    <option value="mp3" [selected]="audioFormat() === 'mp3'">MP3</option>
+                    <option value="m4a" [selected]="audioFormat() === 'm4a'">M4A</option>
+                    <option value="opus" [selected]="audioFormat() === 'opus'">Opus</option>
+                  </select>
+                }
+              </div>
+              @if (!isWeb()) {
+              <div class="grow minw">
+                <label class="lbl" for="fo">Save to</label>
+                <div class="row"><input id="fo" class="in grow" [value]="folder()" readonly /><button type="button" class="ib sq" aria-label="Choose folder" (click)="chooseFolder()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg></button></div>
+              </div>
+              }
+            </div>
+            <div class="row end" style="margin-top: auto">
+              <button type="button" class="btn big" [disabled]="length() <= 0 || !!timeError()" (click)="addToQueue()">Add to queue</button>
+              <button type="button" class="btn pri big" [disabled]="length() <= 0 || !!timeError()" (click)="download()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14" /></svg>
+                {{ kind() === 'audio' ? 'Download audio clip' : 'Download clip' }}
+              </button>
+            </div>
+          }
+        </main>
+      }
+
+      @case ('queue') {
+        <!-- ================= Queue ================= -->
+        <main class="main scroll">
+          <div class="row">
+            <div class="grow"><h1 class="h2">Queue</h1><div class="hint">{{ queueSummary() }}</div></div>
+            <button type="button" class="btn sm" (click)="queue.setHeld(!queue.held())">{{ queue.held() ? 'Resume queue' : 'Pause queue' }}</button>
+            <button type="button" class="btn sm" (click)="queue.clearFinished()">Clear finished</button>
+            <button type="button" class="btn pri sm" (click)="another()">+ Add clip</button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" [class.a]="filter() === 'all'" [attr.aria-selected]="filter() === 'all'" (click)="filter.set('all')">All <em>{{ queue.jobs().length }}</em></button>
+            <button type="button" role="tab" [class.a]="filter() === 'active'" [attr.aria-selected]="filter() === 'active'" (click)="filter.set('active')">Active <em>{{ queue.openCount() }}</em></button>
+            <button type="button" role="tab" [class.a]="filter() === 'done'" [attr.aria-selected]="filter() === 'done'" (click)="filter.set('done')">Done <em>{{ queue.doneCount() }}</em></button>
+            <button type="button" role="tab" [class.a]="filter() === 'failed'" [attr.aria-selected]="filter() === 'failed'" (click)="filter.set('failed')">Failed <em>{{ queue.failedCount() }}</em></button>
+          </div>
+          @if (queue.held()) { <div class="note">The queue is paused. Clips that are running will finish; waiting ones won't start.</div> }
+          @if (visibleJobs().length) {
+            <section class="card flush">
+              @for (j of visibleJobs(); track j.id) {
+                <div class="li">
+                  <div class="th" [class.v]="j.spec.crop?.aspectW === 9" [style.background-image]="j.thumbnail ? 'url(' + j.thumbnail + ')' : null"></div>
+                  <div class="grow minw">
+                    <div class="row" style="gap: 8px"><b class="trunc">{{ j.title }}</b>@if (j.spec.crop; as c) { <span class="chip tag">{{ c.aspectW }}:{{ c.aspectH }}</span> }</div>
+                    <div class="hint mono">{{ jobRange(j) }} · {{ jobFormat(j) }}</div>
+                    @if (j.status === 'active') {
+                      @let v = statusOf(j);
+                      <div class="pb thin" [class.indet]="v.indeterminate" role="progressbar" [attr.aria-label]="'Progress for ' + j.title" [attr.aria-valuenow]="v.indeterminate ? null : j.percent" aria-valuemin="0" aria-valuemax="100"><div [style.width.%]="v.indeterminate ? 35 : j.percent"></div></div>
+                      @if (v.hint) { <div class="statushint sm" [class.warn]="v.worrying">{{ v.hint }}</div> }
+                    }
+                    @if (j.status === 'failed') { <div class="err" style="margin: 2px 0 0">{{ j.error }}</div> }
+                  </div>
+                  @switch (j.status) {
+                    @case ('active') {
+                      @let v = statusOf(j);
+                      <div class="right" [title]="v.hint ?? ''">
+                        @if (v.indeterminate) { <b class="mono">{{ v.elapsed }}</b> } @else { <b class="mono">{{ j.percent }}%</b> }
+                        <div class="hint" [class.bad]="v.worrying">{{ v.worrying ? 'No new data' : v.label }}</div>
+                      </div>
+                    }
+                    @case ('waiting') { <span class="chip neu">Waiting</span> }
+                    @case ('paused') { <span class="chip neu">Paused · {{ j.percent }}%</span> }
+                    @case ('pausing') { <span class="chip neu"><span class="spinner dark sm" aria-hidden="true"></span>Pausing…</span> }
+                    @case ('cancelling') { <span class="chip neu"><span class="spinner dark sm" aria-hidden="true"></span>Cancelling…</span> }
+                    @case ('done') { <span class="chip ok">Done</span> }
+                    @case ('failed') { <span class="chip bad">Failed</span> }
+                  }
+                  <div class="row" style="gap: 6px">
+                    @if (j.status === 'done' && j.file) { <button type="button" class="btn sm" (click)="reveal(j.file)">{{ isWeb() ? 'Download file' : 'Show in folder' }}</button> }
+                    @if (j.status === 'failed') { <button type="button" class="btn sm" (click)="queue.retry(j.id)">Retry</button> }
+                    @if (j.status === 'active' && j.resumable) { <button type="button" class="ib sm" [attr.aria-label]="'Pause ' + j.title" title="Pause" (click)="queue.pause(j.id)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg></button> }
+                    @if (j.status === 'paused') { <button type="button" class="ib sm" [attr.aria-label]="'Resume ' + j.title" title="Resume" (click)="queue.resume(j.id)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg></button> }
+                    <button type="button" class="ib sm" [disabled]="j.status === 'cancelling'" [attr.aria-label]="(['active', 'waiting', 'cancelling', 'pausing', 'paused'].includes(j.status) ? 'Cancel ' : 'Remove ') + j.title" (click)="queue.cancel(j.id)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </section>
+          } @else {
+            <section class="card empty">
+              <b>{{ queue.jobs().length ? 'Nothing here' : 'No clips in the queue' }}</b>
+              <p class="hint" style="margin: 4px 0 12px">Load a video, pick a part, and choose Add to queue to line clips up.</p>
+              <button type="button" class="btn pri" (click)="another()">Add a clip</button>
+            </section>
+          }
+        </main>
+      }
+
+      @case ('busy') {
+        <!-- ================= Downloading ================= -->
+        <main class="main">
+          @if (info(); as i) {
+            <section class="card row" style="gap: 16px">
+              <div class="thumb">@if (i.thumbnail) { <img [src]="i.thumbnail" alt="" /> } @else { <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg> }</div>
+              <div class="grow minw">
+                <div class="title">{{ i.title }}</div>
+                <div class="hint">{{ i.uploader ?? 'Unknown channel' }}</div>
+                <div class="mono rng">{{ fmt(start()) }} → {{ fmt(end()) }} · {{ fmt(length()) }} · {{ kind() === 'audio' ? audioFormat().toUpperCase() : 'MP4' }}{{ cropSpec() ? ' · ' + frameDef().label : '' }}</div>
+              </div>
+            </section>
+          }
+          <section class="card big-card">
+            <div class="row" style="align-items: baseline">
+              <h1 class="h3 grow">{{ job()?.status === 'cancelling' ? 'Cancelling…' : job()?.status === 'paused' ? 'Paused' : job()?.status === 'pausing' ? 'Pausing…' : 'Downloading your clip' }}</h1>
+              @if (busyStatus(); as v) {
+                @if (v.indeterminate) { <span class="elapsed mono" title="Time since it started">{{ v.elapsed }}</span> }
+                @else { <span class="pct mono" aria-live="polite">{{ percent() }}%</span> }
+              }
+            </div>
+            @if (busyStatus(); as v) {
+              <div class="pb" [class.indet]="v.indeterminate" role="progressbar" aria-label="Download progress" [attr.aria-valuenow]="v.indeterminate ? null : percent()" aria-valuemin="0" aria-valuemax="100"><div [style.width.%]="v.indeterminate ? 35 : percent()"></div></div>
+              <div class="statusline" role="status" aria-live="polite">
+                @if (v.indeterminate) { <span class="spinner dark" aria-hidden="true"></span> }
+                <span>{{ v.label }}</span>
+                @if (!v.indeterminate && job()?.detail) { <span class="hint mono">· {{ job()?.detail }}</span> }
+                @if (!v.indeterminate) { <span class="hint mono grow" style="text-align: right">{{ v.elapsed }}</span> }
+              </div>
+              @if (v.hint) { <div class="statushint" [class.warn]="v.worrying">{{ v.hint }}</div> }
+            }
+            <ol class="steps">
+              <li [class.done]="step() > 1" [class.now]="step() === 1"><span class="dot">{{ step() > 1 ? '✓' : '1' }}</span>Reading link</li>
+              <li [class.done]="step() > 2" [class.now]="step() === 2"><span class="dot">{{ step() > 2 ? '✓' : '2' }}</span>Downloading the clip</li>
+              <li [class.now]="step() === 3"><span class="dot">3</span>Finishing the file</li>
+            </ol>
+          </section>
+          <div class="row">
+            <div class="grow minw">@if (!isWeb()) { <span class="lbl">Saving to</span><div class="mono hint trunc">{{ folder() }}</div> } @else { <span class="hint">The server is making your clip. You can download it when it's done.</span> }</div>
+            <button type="button" class="btn" (click)="screen.set('queue')">View queue</button>
+            @if (job()?.resumable && job()?.status !== 'cancelling') {
+              <button type="button" class="btn" [disabled]="job()?.status === 'pausing'" (click)="pauseOrResume()">
+                {{ job()?.status === 'paused' ? 'Resume' : job()?.status === 'pausing' ? 'Pausing…' : 'Pause' }}
+              </button>
+            }
+            <button type="button" class="btn" [disabled]="job()?.status === 'cancelling'" (click)="cancel()">{{ job()?.status === 'cancelling' ? 'Cancelling…' : 'Cancel' }}</button>
+          </div>
+        </main>
+      }
+
+      @case ('done') {
+        <!-- ================= Done ================= -->
+        <main class="main center-all">
+          <section class="card donecard">
+            <div class="bigcheck">✓</div>
+            <h1 class="h2">Your clip is ready</h1>
+            <div class="mono hint breakall">{{ fileName(resultFile()) }}</div>
+            <div class="facts">
+              <div><b>Range</b><span class="mono">{{ fmt(start()) }} → {{ fmt(end()) }}</span></div>
+              <div><b>Length</b><span class="mono">{{ fmt(length()) }}</span></div>
+              <div><b>Format</b><span class="mono">{{ kind() === 'audio' ? audioFormat().toUpperCase() : 'MP4' }}{{ cropSpec() ? ' · ' + frameDef().id : '' }}</span></div>
+            </div>
+            <div class="row" style="margin-top: 8px">
+              <button type="button" class="btn pri big" (click)="reveal(resultFile())">{{ isWeb() ? 'Download file' : 'Show in folder' }}</button>
+              <button type="button" class="btn big" (click)="screen.set('loaded')">Trim again</button>
+              <button type="button" class="btn big" (click)="another()">Clip another</button>
+            </div>
+          </section>
+        </main>
+      }
+    }
+  }
+  @if (toast()) {
+    <div class="toast" role="status">{{ toast() }} <button type="button" class="link" (click)="screen.set('queue')">View queue</button></div>
+  }
+</div>

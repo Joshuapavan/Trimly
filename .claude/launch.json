@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trimly-web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "ng",
+        "serve",
+        "--port",
+        "4200"
+      ],
+      "port": 4200
+    },
+    {
+      "name": "trimly-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4300",
+        "--directory",
+        "website"
+      ],
+      "port": 4300
+    },
+    {
+      "name": "trimly-web-live",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "ng",
+        "serve",
+        "--port",
+        "4400",
+        "--proxy-config",
+        "proxy.conf.json"
+      ],
+      "port": 4400
+    }
+  ]
+}
