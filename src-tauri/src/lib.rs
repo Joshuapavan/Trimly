@@ -72,6 +72,22 @@ fn default_dir(app: AppHandle) -> Option<String> {
     app.path().download_dir().ok().map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Open a web link in the person's browser. Only plain https links are
+/// accepted, and the address is passed as a single argument (never through a shell).
+#[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) || url.len() > 2000 {
+        return Err("That isn't a link Trimly can open.".into());
+    }
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32").arg("url.dll,FileProtocolHandler").arg(&url).spawn();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(&url).spawn();
+    result.map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn reveal(path: String) {
     let p = PathBuf::from(&path);
@@ -103,6 +119,7 @@ pub fn run() {
             discard_clip,
             default_dir,
             reveal,
+            open_external,
             set_tool_paths
         ])
         .run(tauri::generate_context!())

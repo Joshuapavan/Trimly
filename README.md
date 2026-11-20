@@ -136,6 +136,29 @@ Vercel hosts the web app (static files). It **can't run the server**: its functi
 2. In Vercel, import this repository. [`vercel.json`](vercel.json) already sets the install, build and output settings.
 3. Under **Settings → Environment Variables**, add `TRIMLY_API_URL` with the address from step 1 (no trailing slash), then deploy. The build writes it into `config.js`.
 
+#### Example: the server on Fly.io
+
+[`fly.toml`](fly.toml) is ready to use. It builds the image from the Dockerfile, keeps one machine always running (clips in progress live in its memory), and puts clips on a volume.
+
+```bash
+fly launch --copy-config --no-deploy       # choose your own app name when asked
+fly volumes create trimly_data --size 3 --region bom
+fly secrets set TRIMLY_ACCESS_KEY="choose-a-long-secret"
+fly deploy
+```
+
+Then set `TRIMLY_API_URL` in Vercel to `https://<your-app-name>.fly.dev` and redeploy. Edit `TRIMLY_ALLOW_ORIGIN` in `fly.toml` to your Vercel address. Keep it at exactly one machine, because a second one wouldn't know about the first one's clips.
+
+#### Free option: run the server on your own computer
+
+If you don't want to pay for hosting, [`scripts/share-server.sh`](scripts/share-server.sh) runs the server on your computer and shares it with a free [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/). It needs `cloudflared`, `yt-dlp` and `ffmpeg` installed.
+
+```bash
+TRIMLY_ALLOW_ORIGIN=https://your-site.vercel.app scripts/share-server.sh
+```
+
+It prints a `https://….trycloudflare.com` address and an access key (kept in `~/.trimly-access-key`). Set that address as `TRIMLY_API_URL` in Vercel and redeploy. Two limits: the address changes every time you start it, so Vercel's variable has to be updated each time, and the site only works while your computer is on and the script is running. A home connection is also much less likely to be blocked by video sites than a cloud server.
+
 The image is published to `ghcr.io/<owner>/<repo>` by [`.github/workflows/docker.yml`](.github/workflows/docker.yml) when you push to `main`.
 
 ### Things to know before hosting it for other people

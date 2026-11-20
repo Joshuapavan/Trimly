@@ -1,0 +1,56 @@
+# Fly.io settings for the Trimly server (the engine behind the web version).
+# Fly builds the image from the Dockerfile in this folder.
+#
+# First time:
+#   fly launch --copy-config --no-deploy      (pick your own app name)
+#   fly volumes create trimly_data --size 3 --region bom
+#   fly secrets set TRIMLY_ACCESS_KEY="choose-a-long-secret"
+#   fly deploy
+#
+# Then set TRIMLY_API_URL in Vercel to https://<your-app-name>.fly.dev
+
+app = "trimly-api"            # must be unique on Fly: change it
+primary_region = "bom"        # Mumbai. Pick the region nearest your users.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  TRIMLY_DATA_DIR = "/data/clips"
+  TMPDIR = "/data/tmp"        # work files for big clips go on the volume
+  # Which web addresses may call the API (your Vercel site). Comma-separated.
+  TRIMLY_ALLOW_ORIGIN = "https://trimly-clipy.vercel.app"
+  TRIMLY_MAX_JOBS = "2"       # clips at once; raise with a bigger machine
+  TRIMLY_MAX_PARTS = "4"
+  TRIMLY_MAX_CLIP_SECS = "1800"
+  TRIMLY_FILE_TTL_MINS = "120"
+
+[[mounts]]
+  source = "trimly_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Clips in progress live in the server's memory, so it must stay running,
+  # and there must be exactly one machine (a second one wouldn't know about them).
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

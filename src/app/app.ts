@@ -4,6 +4,7 @@ import { CropEditor } from './crop-editor';
 import { Preview } from './preview';
 import { statusView } from './status';
 import { QueueService } from './queue.service';
+import { ReleaseService } from './release.service';
 import { ThemeService } from './theme.service';
 import { DEFAULT_TEMPLATE, RecentClip, Settings, SettingsService } from './settings.service';
 import { CropSpec, BackendService, ToolStatus, VideoInfo } from './backend.service';
@@ -37,11 +38,13 @@ const QUALITIES: { label: string; value: number | null }[] = [
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:click)': 'closeAppMenu($event)', '(document:keydown.escape)': 'closeAppMenu()' },
 })
 export class App implements OnInit {
   readonly backend = inject(BackendService);
   readonly store = inject(SettingsService);
   readonly queue = inject(QueueService);
+  readonly release = inject(ReleaseService);
   readonly themeService = inject(ThemeService);
 
   readonly qualities = QUALITIES;
@@ -183,6 +186,8 @@ export class App implements OnInit {
   }
 
   readonly ready = signal(false);
+  /** The "Get the app" menu: installers for the desktop app. */
+  readonly appMenu = signal(false);
   readonly isWeb = computed(() => this.backend.mode() === 'web');
   readonly isDemo = computed(() => this.backend.mode() === 'demo');
   readonly keyInput = signal('');
@@ -195,6 +200,28 @@ export class App implements OnInit {
   }
 
   /** Ask the server for the access key it needs. */
+  readonly coffeeUrl = 'https://buymeacoffee.com/joshuapavan';
+
+  /** Links to other sites open in the browser, even from the desktop app. */
+  openLink(ev: Event, url: string) {
+    ev.preventDefault();
+    void this.backend.openExternal(url);
+  }
+
+  toggleAppMenu(ev?: Event) {
+    ev?.stopPropagation();
+    const open = !this.appMenu();
+    this.appMenu.set(open);
+    if (open) void this.release.load();
+  }
+
+  /** Close the menu when you click elsewhere or press Escape. */
+  closeAppMenu(ev?: Event) {
+    if (!this.appMenu()) return;
+    if (ev && ev.target instanceof Element && ev.target.closest('.appwrap')) return;
+    this.appMenu.set(false);
+  }
+
   async submitKey() {
     this.keyError.set('');
     if (await this.backend.unlock(this.keyInput())) await this.begin();

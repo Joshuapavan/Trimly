@@ -30,18 +30,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pages has to be switched on once, by hand. Until then, skip the deploy
+      # with a clear message instead of failing.
+      - name: Check that GitHub Pages is enabled
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pages")
+          if [ "$code" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=GitHub Pages is not enabled::The website was not deployed. Open Settings > Pages, set Source to GitHub Actions, then re-run this workflow."
+          fi
+
       # Point the download buttons at this repository's releases.
       - name: Set the repository for the download buttons
+        if: steps.pages.outputs.enabled == 'true'
         env:
           REPO: ${{ github.repository }}
         run: |
           printf "window.TRIMLY_REPO = '%s';\n" "$REPO" > website/config.js
 
       - uses: actions/configure-pages@v5
+        if: steps.pages.outputs.enabled == 'true'
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outputs.enabled == 'true'
         with:
           path: website
 
       - id: deployment
+        if: steps.pages.outputs.enabled == 'true'
         uses: actions/deploy-pages@v4

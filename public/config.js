@@ -3,3 +3,5 @@
 // which serves both). For Vercel, `npm run build:web` rewrites this file from
 // the TRIMLY_API_URL environment variable. The desktop app ignores it.
 window.TRIMLY_API = '';
+// The GitHub repository whose releases hold the desktop installers ("Get the app").
+window.TRIMLY_REPO = 'Joshuapavan/Trimly';

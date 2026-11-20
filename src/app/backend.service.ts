@@ -330,6 +330,15 @@ export class BackendService {
     return typeof picked === 'string' ? picked : null;
   }
 
+  /** Open a web link: in the person's browser from the desktop app, in a new tab on the web. */
+  async openExternal(url: string): Promise<void> {
+    if (this.native) {
+      await invoke('open_external', { url });
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
   async reveal(path: string): Promise<void> {
     if (this.isWeb) {
       // On the web there is no folder to open: this saves the file.

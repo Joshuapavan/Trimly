@@ -41,8 +41,10 @@ COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
 COPY --from=server /app/target/release/trimly-server /usr/local/bin/trimly-server
 COPY --from=web /app/dist/trimly/browser /app/web
 
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# The entrypoint starts as root only to fix the data folder's owner, then
+# switches to the unprivileged "trimly" user.
 RUN useradd --create-home --uid 10001 trimly && mkdir -p /data && chown trimly /data
-USER trimly
 ENV PORT=8080 \
     TRIMLY_STATIC_DIR=/app/web \
     TRIMLY_DATA_DIR=/data \
@@ -51,4 +53,5 @@ VOLUME /data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD curl -fsS "http://localhost:${PORT}/api/health" || exit 1
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["trimly-server"]
