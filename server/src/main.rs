@@ -305,9 +305,18 @@ async fn frame(State(app): State<Shared>, Path(id): Path<String>, Query(q): Quer
         .get(&id)
         .map(|(s, _)| s.clone())
         .ok_or(ApiError(StatusCode::NOT_FOUND, "That preview has expired.".into()))?;
-    let image = blocking(move || engine::preview_frame(&id, &source, q.t))
+    let t = q.t;
+    let image = blocking(move || engine::preview_frame(&id, &source, t))
         .await?
-        .map_err(|e| ApiError(StatusCode::BAD_GATEWAY, e))?;
+        .map_err(|e| {
+            if e == engine::SUPERSEDED {
+                // A newer request for this preview replaced it; the browser ignores this one.
+                ApiError(StatusCode::CONFLICT, e)
+            } else {
+                eprintln!("[trimly] preview frame at {t:.1}s failed: {e}");
+                ApiError(StatusCode::BAD_GATEWAY, e)
+            }
+        })?;
     Ok(Json(Frame { image }))
 }
 

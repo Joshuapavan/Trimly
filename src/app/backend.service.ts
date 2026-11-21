@@ -93,6 +93,12 @@ export class BackendService {
   private serverIds = new Map<string, string>();
   private fileNames = new Map<string, string>();
   private cancelledEarly = new Set<string>();
+  /** Which video page each preview address came from, so an expired one can be renewed. */
+  private previewPages = new Map<string, { url: string; cookies: string | null }>();
+  /** Old preview address -> the renewed one. */
+  private previewAlias = new Map<string, string>();
+  /** Why the last preview picture failed, to show beside the message. */
+  readonly lastPreviewError = signal('');
   private listeners = new Set<(p: Progress) => void>();
   private mockJobs = new Map<string, { stop: () => void; reject: (r: string) => void; resumable: boolean }>();
   /** Progress kept across pauses, like the saved parts on disk. */
@@ -214,27 +220,50 @@ export class BackendService {
 
   /** Address of a small version of the video, used to pull preview frames. Null if none. */
   async previewUrl(url: string, cookiesBrowser: string | null): Promise<string | null> {
+    let source: string | null = null;
     if (this.isWeb) {
       try {
-        return (await this.http<{ previewId: string | null }>('/preview', { url })).previewId;
+        source = (await this.http<{ previewId: string | null }>('/preview', { url })).previewId;
       } catch {
-        return null;
+        source = null;
+      }
+    } else if (!this.native) {
+      source = 'mock://video';
+    } else {
+      try {
+        source = await invoke<string | null>('preview_url', { url, cookiesBrowser });
+      } catch {
+        source = null;
       }
     }
-    if (!this.native) return 'mock://video';
-    try {
-      return await invoke<string | null>('preview_url', { url, cookiesBrowser });
-    } catch {
-      return null;
-    }
+    if (source) this.previewPages.set(source, { url, cookies: cookiesBrowser });
+    return source;
   }
 
-  /** The picture at `time` seconds as an image address, or null if it couldn't be read. */
+  /**
+   * The picture at `time` seconds as an image address, or null if it couldn't be read.
+   * Video addresses expire after a few hours, so a failure renews the address once and tries again.
+   */
   async previewFrame(source: string, time: number): Promise<string | null> {
+    const current = this.previewAlias.get(source) ?? source;
+    const first = await this.frameOnce(current, time);
+    if (first) return first;
+    const page = this.previewPages.get(source) ?? this.previewPages.get(current);
+    if (!page || !(this.native || this.isWeb)) return null;
+    const fresh = await this.previewUrl(page.url, page.cookies);
+    if (!fresh || fresh === current) return null;
+    this.previewAlias.set(source, fresh);
+    return this.frameOnce(fresh, time);
+  }
+
+  private async frameOnce(source: string, time: number): Promise<string | null> {
     if (this.isWeb) {
       try {
-        return (await this.http<{ image: string }>(`/preview/${encodeURIComponent(source)}/frame?t=${time}`)).image;
-      } catch {
+        const image = (await this.http<{ image: string }>(`/preview/${encodeURIComponent(source)}/frame?t=${time}`)).image;
+        this.lastPreviewError.set('');
+        return image;
+      } catch (e) {
+        this.lastPreviewError.set(String(e));
         return null;
       }
     }
@@ -245,8 +274,11 @@ export class BackendService {
       return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
     try {
-      return await invoke<string>('preview_frame', { source, time });
-    } catch {
+      const image = await invoke<string>('preview_frame', { source, time });
+      this.lastPreviewError.set('');
+      return image;
+    } catch (e) {
+      this.lastPreviewError.set(String(e));
       return null;
     }
   }

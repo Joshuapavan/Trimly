@@ -149,15 +149,16 @@ fly deploy
 
 Then set `TRIMLY_API_URL` in Vercel to `https://<your-app-name>.fly.dev` and redeploy. Edit `TRIMLY_ALLOW_ORIGIN` in `fly.toml` to your Vercel address. Keep it at exactly one machine, because a second one wouldn't know about the first one's clips.
 
-#### Free option: run the server on your own computer
+#### Free option: a Hugging Face Space
 
-If you don't want to pay for hosting, [`scripts/share-server.sh`](scripts/share-server.sh) runs the server on your computer and shares it with a free [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/). It needs `cloudflared`, `yt-dlp` and `ffmpeg` installed.
+[`hf-space/`](hf-space) holds two small files that run the published Docker image on a free [Hugging Face Space](https://huggingface.co/docs/hub/spaces-sdks-docker) (2 vCPU, 16 GB of memory, no card needed). The Space also serves the web app, so its own address works as a complete site.
 
-```bash
-TRIMLY_ALLOW_ORIGIN=https://your-site.vercel.app scripts/share-server.sh
-```
+1. Create a Space at https://huggingface.co/new-space: choose the **Docker** SDK ("Blank"), and keep it **Public**.
+2. Upload `hf-space/Dockerfile` and `hf-space/README.md` to the Space (**Files → Add file**), as `Dockerfile` and `README.md` at its top level.
+3. In the Space's **Settings → Variables and secrets**, add a **secret** named `TRIMLY_ACCESS_KEY` with a long random value, and a **variable** `TRIMLY_ALLOW_ORIGIN` set to your Vercel address (not needed if you only use the Space's own address).
+4. Wait for it to build and start. Your address is `https://<your-username>-<space-name>.hf.space`. Check `/api/health` on it, then use it as `TRIMLY_API_URL` in Vercel.
 
-It prints a `https://….trycloudflare.com` address and an access key (kept in `~/.trimly-access-key`). Set that address as `TRIMLY_API_URL` in Vercel and redeploy. Two limits: the address changes every time you start it, so Vercel's variable has to be updated each time, and the site only works while your computer is on and the script is running. A home connection is also much less likely to be blocked by video sites than a cloud server.
+Know the limits: a free Space goes to sleep when idle and wakes when visited (the first request takes about a minute), its disk is temporary, and Hugging Face runs on cloud addresses that video sites like YouTube often block. Hugging Face's content rules also restrict tools that download copyrighted media, and downloader Spaces have been removed before, so this is best treated as an experiment.
 
 The image is published to `ghcr.io/<owner>/<repo>` by [`.github/workflows/docker.yml`](.github/workflows/docker.yml) when you push to `main`.
 

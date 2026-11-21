@@ -357,19 +357,51 @@ pub fn preview_url(url: &str, cookies_browser: Option<&str>) -> Result<Option<St
 /// Browsers whose sign-in yt-dlp may borrow.
 const COOKIE_BROWSERS: [&str; 7] = ["chrome", "firefox", "safari", "edge", "brave", "opera", "vivaldi"];
 
-/// The preview frames being fetched right now, one per caller (`slot`). A
-/// newer request from the same caller stops its older one.
-static PREVIEW: Mutex<Option<HashMap<String, Child>>> = Mutex::new(None);
+/// The preview frames being fetched right now, one per caller (`slot`), tagged
+/// with a request number. A newer request from the same caller stops its older
+/// one. The numbers are handed out when a request arrives, so if requests
+/// start out of order the older one never cancels the newer.
+static PREVIEW: Mutex<Option<HashMap<String, (u64, Child)>>> = Mutex::new(None);
+static PREVIEW_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Returned when a newer request for the same preview replaced this one.
+pub const SUPERSEDED: &str = "Superseded.";
 
 const PREVIEW_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36";
 
 /// One picture from the video at `time` seconds, as a data address the page can show.
+/// A failure is tried once more, since the first read of a long stream can fail
+/// for passing reasons.
 pub fn preview_frame(slot: &str, source: &str, time: f64) -> Result<String, String> {
-    use base64::Engine;
     ensure_http(source)?;
     if !time.is_finite() || time < 0.0 {
         return Err("Bad time.".into());
     }
+    let seq = PREVIEW_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    match preview_frame_once(slot, seq, source, time) {
+        Err(e) if e != SUPERSEDED => {
+            if is_newest_preview(slot, seq) {
+                preview_frame_once(slot, seq, source, time)
+            } else {
+                Err(SUPERSEDED.into())
+            }
+        }
+        other => other,
+    }
+}
+
+/// False once a newer request for this slot has arrived.
+fn is_newest_preview(slot: &str, seq: u64) -> bool {
+    let guard = PREVIEW.lock().unwrap();
+    guard
+        .as_ref()
+        .and_then(|m| m.get(slot))
+        .map(|(current, _)| *current <= seq)
+        .unwrap_or(true)
+}
+
+fn preview_frame_once(slot: &str, seq: u64, source: &str, time: f64) -> Result<String, String> {
+    use base64::Engine;
     let ffmpeg = find_bin("ffmpeg").ok_or("ffmpeg is not installed.")?;
     let mut child = command(&ffmpeg)
         .args(["-loglevel", "error", "-nostdin", "-rw_timeout", "20000000", "-user_agent", PREVIEW_UA])
@@ -377,35 +409,59 @@ pub fn preview_frame(slot: &str, source: &str, time: f64) -> Result<String, Stri
         .arg(source)
         .args(["-frames:v", "1", "-vf", "scale=640:-2", "-q:v", "4", "-f", "mjpeg", "pipe:1"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .stdin(Stdio::null())
         .spawn()
         .map_err(|e| format!("Could not start ffmpeg: {e}"))?;
     let mut out = child.stdout.take().ok_or("No output.")?;
+    let mut err = child.stderr.take().ok_or("No output.")?;
     let pid = child.id();
     {
         let mut guard = PREVIEW.lock().unwrap();
         let map = guard.get_or_insert_with(HashMap::new);
-        if let Some(mut old) = map.remove(slot) {
-            kill_tree(&mut old);
-            let _ = old.wait();
+        match map.get(slot) {
+            // A newer request is already running: this one is out of date.
+            Some((current, _)) if *current > seq => {
+                kill_tree(&mut child);
+                let _ = child.wait();
+                return Err(SUPERSEDED.into());
+            }
+            Some(_) => {
+                if let Some((_, mut old)) = map.remove(slot) {
+                    kill_tree(&mut old);
+                    let _ = old.wait();
+                }
+            }
+            None => {}
         }
-        map.insert(slot.to_string(), child);
+        map.insert(slot.to_string(), (seq, child));
     }
+    // ffmpeg's messages are short; read them on the side so a full pipe can't block it.
+    let messages = std::thread::spawn(move || {
+        let mut text = String::new();
+        let _ = err.read_to_string(&mut text);
+        text
+    });
     let mut buf = Vec::new();
     let _ = out.read_to_end(&mut buf);
     {
         let mut guard = PREVIEW.lock().unwrap();
         if let Some(map) = guard.as_mut() {
-            if map.get(slot).map(|c| c.id()) == Some(pid) {
-                if let Some(mut c) = map.remove(slot) {
+            if map.get(slot).map(|(s, c)| (*s, c.id())) == Some((seq, pid)) {
+                if let Some((_, mut c)) = map.remove(slot) {
                     let _ = c.wait();
                 }
             }
         }
     }
+    let said = messages.join().unwrap_or_default();
     if buf.is_empty() {
-        return Err("No picture at that time.".to_string());
+        // Replaced by a newer request while running?
+        if !is_newest_preview(slot, seq) {
+            return Err(SUPERSEDED.into());
+        }
+        let reason = error_from(&said);
+        return Err(if said.trim().is_empty() { "No picture at that time.".into() } else { reason });
     }
     Ok(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(&buf)))
 }

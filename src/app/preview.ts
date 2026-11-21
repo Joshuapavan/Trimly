@@ -34,6 +34,7 @@ const SETTLE_MS = 300;
       <div class="miss">
         Couldn't load a picture at {{ fmt(time()) }}.
         <button type="button" class="link" (click)="retry()">Try again</button>
+        @if (backend.lastPreviewError()) { <div class="why">{{ backend.lastPreviewError() }}</div> }
       </div>
     }
     <div class="ctl">
@@ -53,6 +54,7 @@ const SETTLE_MS = 300;
     .busy { position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 6px; background: rgba(17, 17, 17, 0.78);
       color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 12px; }
     .miss { margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .why { margin-top: 2px; font: 11px var(--mono); color: var(--muted-2); word-break: break-word; }
     .link { border: 0; background: none; padding: 0; text-decoration: underline; color: inherit; font-size: inherit; }
     .ctl { display: flex; gap: 6px; margin-top: 8px; }
     .btn { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); font-weight: 500; }
@@ -80,11 +82,13 @@ export class Preview {
   readonly busy = signal(false);
   readonly missed = signal(false);
 
-  private readonly backend = inject(BackendService);
+  readonly backend = inject(BackendService);
   private readonly cache = new Map<number, string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private token = 0;
   private lastSrc: string | null = null;
+  /** The moment being fetched right now, so the same one isn't started twice. */
+  private inflightKey: number | null = null;
 
   readonly fmt = (t: number) => formatTime(t, this.clock(), true);
 
@@ -122,18 +126,29 @@ export class Preview {
       this.frame.set(hit);
       return;
     }
+    // Already loading this very moment: let that finish.
+    if (this.busy() && this.inflightKey === key) return;
     // Keep showing the last frame while the pointer is still moving.
     this.timer = setTimeout(() => this.fetch(src, t), this.frame() ? SETTLE_MS : 0);
   }
 
-  private fetch(src: string, t: number) {
+  private fetch(src: string, t: number, attempt = 0) {
     const key = this.bucket(t);
     const mine = ++this.token;
+    this.inflightKey = key;
     this.busy.set(true);
     this.missed.set(false);
     void this.backend.previewFrame(src, key).then((img) => {
       if (mine !== this.token) return; // a newer request replaced this one
+      if (!img && attempt < 1) {
+        // One more try before telling the person: a read can fail for passing reasons.
+        this.timer = setTimeout(() => {
+          if (mine === this.token) this.fetch(src, t, attempt + 1);
+        }, 700);
+        return;
+      }
       this.busy.set(false);
+      this.inflightKey = null;
       if (img) {
         this.cache.set(key, img);
         if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value as number);
