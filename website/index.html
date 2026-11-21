@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script>
+    document.documentElement.classList.add('js');
     try {
       var t = localStorage.getItem('trimly.site.theme');
       if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -33,6 +34,7 @@
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
+  <div class="progress" aria-hidden="true"><i></i></div>
 
   <header class="top">
     <div class="wrap bar">
@@ -55,11 +57,12 @@
   </header>
 
   <main id="main">
+    <div class="glow" aria-hidden="true"><i></i><i></i><i></i></div>
     <!-- ============ Hero ============ -->
     <section class="hero wrap">
       <div class="hero-copy">
         <p class="eyebrow">Free for macOS, Windows and Linux, or use it in your browser</p>
-        <h1>Keep the part you want.<br>Skip the rest.</h1>
+        <h1>Keep <span class="trim">the part you want.</span><br>Skip the rest.</h1>
         <p class="lead">Paste a video link, drag a start and an end, and Trimly downloads <strong>only that clip</strong>. No more saving a two-hour video to keep thirty seconds.</p>
         <div class="cta">
           <a id="hero-download" class="btn primary big" href="#download">Download</a>
@@ -69,27 +72,43 @@
         <p class="caption-note">Online needs an access key. <a href="#ways">See the difference</a></p>
       </div>
 
-      <div class="mock" role="img" aria-label="The Trimly window: a timeline with two handles marking the clip, and a vertical crop box over the video">
-        <div class="mock-bar"><i></i><i></i><i></i><span>Trimly</span></div>
+      <div class="mock" id="demo" role="group" aria-label="Live demo: drag the two orange handles to trim the clip">
+        <div class="mock-bar"><i></i><i></i><i></i><span>Trimly</span><em id="demo-replay" hidden>Replay demo</em></div>
         <div class="mock-body">
-          <div class="mock-url">https://www.youtube.com/watch?v=…<b>Load video</b></div>
+          <div class="mock-url"><span><span class="dim">https://www.</span><span id="demo-url"></span><i class="caret"></i></span><b id="demo-load">Load video</b></div>
           <div class="mock-row">
-            <div class="mock-frame">
-              <div class="mock-crop"></div>
-              <span class="mock-time">12:45</span>
+            <div class="mock-frame" id="demo-frame">
+              <div class="scene"></div>
+              <div class="scan"></div>
+              <div class="mock-crop" id="demo-crop"></div>
+              <span class="mock-time" id="demo-time">00:00</span>
             </div>
             <div class="mock-side">
-              <div class="mock-chip">9:16 · Reels</div>
-              <div class="mock-lines"><span></span><span></span><span></span></div>
+              <div class="mock-chip" id="demo-chip">Original</div>
+              <div class="mock-stat"><span>Clip length</span><b id="demo-len">58:12</b></div>
+              <div class="mock-stat"><span>Download size</span><b id="demo-size">0 MB</b></div>
             </div>
           </div>
-          <div class="mock-track">
-            <div class="mock-dim" style="width:22%"></div>
-            <div class="mock-sel" style="left:22%;width:38%"><u></u><u></u></div>
-            <div class="mock-dim" style="left:60%;right:0"></div>
-            <span class="mock-tag" style="left:20%">12:45</span><span class="mock-tag" style="left:56%">35:10</span>
+          <div class="mock-track" id="demo-track">
+            <div class="thumbs" id="demo-thumbs" aria-hidden="true"></div>
+            <div class="d-dim" id="demo-dim-l"></div>
+            <div class="d-dim" id="demo-dim-r"></div>
+            <div class="d-sel" id="demo-sel"></div>
+            <div class="d-hd" id="demo-hs" role="slider" tabindex="0" aria-label="Clip start" aria-valuemin="0"><span class="d-tag" id="demo-ts">00:00</span></div>
+            <div class="d-hd" id="demo-he" role="slider" tabindex="0" aria-label="Clip end" aria-valuemin="0"><span class="d-tag" id="demo-te">58:12</span></div>
           </div>
-          <div class="mock-foot"><span>Clip length 22:25</span><b>Download clip</b></div>
+          <div class="mock-foot"><span id="demo-hint" aria-live="polite">Watch it trim a clip</span><b id="demo-dl" class="mock-dl" role="button" tabindex="0"><i class="fill"></i><span id="demo-dl-label">Download clip</span></b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Works with ============ -->
+    <section class="wrap marquee" aria-label="Sites that work with Trimly">
+      <p class="marquee-label">Works with</p>
+      <div class="marquee-view">
+        <div class="marquee-track">
+          <span>YouTube</span><span>Vimeo</span><span>Twitch</span><span>X</span><span>TikTok</span><span>Instagram</span><span>Facebook</span><span>Reddit</span><span>SoundCloud</span><span>Dailymotion</span><span>Bilibili</span><span>and 1000+ more</span>
+          <span aria-hidden="true">YouTube</span><span aria-hidden="true">Vimeo</span><span aria-hidden="true">Twitch</span><span aria-hidden="true">X</span><span aria-hidden="true">TikTok</span><span aria-hidden="true">Instagram</span><span aria-hidden="true">Facebook</span><span aria-hidden="true">Reddit</span><span aria-hidden="true">SoundCloud</span><span aria-hidden="true">Dailymotion</span><span aria-hidden="true">Bilibili</span><span aria-hidden="true">and 1000+ more</span>
         </div>
       </div>
     </section>
@@ -153,6 +172,14 @@
           <p>Save MP4 at the quality you choose, or just the sound as MP3, M4A or Opus. Works with YouTube and over a thousand other sites.</p>
         </article>
       </div>
+    </section>
+
+    <!-- ============ In numbers ============ -->
+    <section class="wrap stats" aria-label="Trimly in numbers">
+      <div class="stat"><b data-count="1000" data-suffix="+">1000+</b><span>sites supported</span></div>
+      <div class="stat"><b data-count="15" data-prefix="~" data-suffix="s">~15s</b><span>to clip 3 minutes of video, in our test</span></div>
+      <div class="stat"><b data-count="3">3</b><span>crop shapes for Reels, posts and squares</span></div>
+      <div class="stat"><b>Free</b><span>and open source</span></div>
     </section>
 
     <!-- ============ Who it's for ============ -->
@@ -248,6 +275,32 @@
       <details><summary>Is it okay to download any video?</summary><p>Only download and share content you have the right to use. Trimly is a tool, and what you do with it is up to you and the rules of the sites involved.</p></details>
     </section>
 
+    <!-- ============ Support ============ -->
+    <section id="support" class="wrap section">
+      <div class="support-card">
+        <div class="cup" aria-hidden="true">
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <path class="steam s1" d="M44 30c-6-6 6-10 0-18" /><path class="steam s2" d="M60 30c-6-6 6-10 0-18" /><path class="steam s3" d="M76 30c-6-6 6-10 0-18" />
+            <path d="M28 46h56v22a22 22 0 0 1-22 22h-12a22 22 0 0 1-22-22V46z" fill="#ffdd00" stroke="#1b1b1a" />
+            <path d="M84 52h6a10 10 0 0 1 0 20h-8" stroke="#1b1b1a" />
+            <path d="M24 100h64" stroke="#1b1b1a" />
+          </svg>
+        </div>
+        <div class="support-copy">
+          <h2>Trimly is free. A coffee keeps it that way.</h2>
+          <p>Trimly is built and looked after in spare time, and it will stay free and open source. If it saved you a few minutes, you can buy me a coffee. It's completely optional, and everything works without it.</p>
+          <a class="btn bmc big" href="https://buymeacoffee.com/joshuapavan" target="_blank" rel="noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h12v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V8zM17 9h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2" /></svg>
+            Buy me a coffee
+          </a>
+        </div>
+        <figure class="qr">
+          <img src="buy-me-a-coffee-qr.png" width="148" height="148" alt="QR code for buymeacoffee.com/joshuapavan" loading="lazy">
+          <figcaption>Or scan with your phone</figcaption>
+        </figure>
+      </div>
+    </section>
+
     <section class="wrap section final">
       <h2>Ready to clip?</h2>
       <div class="cta" style="justify-content: center">
@@ -266,5 +319,6 @@
 
   <script src="config.js"></script>
   <script src="main.js"></script>
+  <script src="live.js" defer></script>
 </body>
 </html>
