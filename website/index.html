@@ -4,11 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trimly: download just the part of a video you want</title>
-  <meta name="description" content="Paste a video link, choose a start and end, and Trimly downloads only that clip. Crop for Reels, queue several clips, and pause or resume. Free desktop app for macOS, Windows and Linux.">
+  <meta name="description" content="Paste a video link, choose a start and end, and Trimly downloads only that clip. Crop for Reels, queue several clips, and pause or resume. Free desktop app for macOS, Windows and Linux, or use it online in your browser.">
   <meta name="color-scheme" content="light dark">
   <meta property="og:title" content="Trimly: download just the part of a video you want">
-  <meta property="og:description" content="Clip any video link and download only the trimmed part. Free desktop app for macOS, Windows and Linux.">
+  <meta property="og:description" content="Clip any video link and download only the trimmed part. Free desktop app for macOS, Windows and Linux, or use it online.">
+  <meta name="theme-color" content="#c2410c">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Trimly">
+  <meta property="og:image" content="https://joshuapavan.github.io/Trimly/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://joshuapavan.github.io/Trimly/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="styles.css">
@@ -34,6 +45,7 @@
         <a href="#how">How it works</a>
         <a href="#faq">FAQ</a>
         <a href="#download" class="navcta">Download</a>
+        <a data-webapp href="#ways" class="navcta alt">Use online</a>
       </nav>
       <button type="button" id="theme" class="iconbtn" aria-label="Switch theme">
         <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
@@ -46,14 +58,15 @@
     <!-- ============ Hero ============ -->
     <section class="hero wrap">
       <div class="hero-copy">
-        <p class="eyebrow">Free desktop app for macOS, Windows and Linux</p>
+        <p class="eyebrow">Free for macOS, Windows and Linux, or use it in your browser</p>
         <h1>Keep the part you want.<br>Skip the rest.</h1>
         <p class="lead">Paste a video link, drag a start and an end, and Trimly downloads <strong>only that clip</strong>. No more saving a two-hour video to keep thirty seconds.</p>
         <div class="cta">
           <a id="hero-download" class="btn primary big" href="#download">Download</a>
-          <a class="btn big" href="#download">All downloads</a>
+          <a class="btn big" data-webapp href="#ways">Use it online</a>
         </div>
         <p id="hero-caption" class="caption">Version <span data-version>…</span></p>
+        <p class="caption-note">Online needs an access key. <a href="#ways">See the difference</a></p>
       </div>
 
       <div class="mock" role="img" aria-label="The Trimly window: a timeline with two handles marking the clip, and a vertical crop box over the video">
@@ -78,6 +91,36 @@
           </div>
           <div class="mock-foot"><span>Clip length 22:25</span><b>Download clip</b></div>
         </div>
+      </div>
+    </section>
+
+    <!-- ============ Two ways to use it ============ -->
+    <section id="ways" class="wrap section">
+      <h2>Use it your way</h2>
+      <p class="sect-lead">Install the free app, or open Trimly in your browser. The screens and features are the same.</p>
+      <div class="ways">
+        <article class="way best">
+          <span class="badge">Recommended</span>
+          <h3>Desktop app</h3>
+          <ul class="ticks">
+            <li>Runs on your computer: no server, no key, no waiting</li>
+            <li>Saves clips straight into a folder you choose</li>
+            <li>No limit on clip length, and the fastest cuts</li>
+            <li>Can use your browser's sign-in for private videos</li>
+          </ul>
+          <a class="btn primary" href="#download">Download the app</a>
+        </article>
+        <article class="way">
+          <h3>Online</h3>
+          <ul class="ticks">
+            <li>Nothing to install: open it in any browser</li>
+            <li>The clip is made on the Trimly server, then you download the finished file</li>
+            <li>Handy on a computer where you can't install apps</li>
+            <li>The server sets a limit on clip length, and may need a minute to wake up on your first visit</li>
+          </ul>
+          <p class="way-note">You'll be asked for an <b>access key</b> the first time. Don't have one? <a data-issues href="#" rel="noopener">Ask on GitHub</a>.</p>
+          <a class="btn" data-webapp href="#">Open the web app</a>
+        </article>
       </div>
     </section>
 
@@ -112,6 +155,17 @@
       </div>
     </section>
 
+    <!-- ============ Who it's for ============ -->
+    <section id="uses" class="wrap section">
+      <h2>Made for the moments worth keeping</h2>
+      <div class="grid">
+        <article class="card"><h3>Reels, Shorts and TikTok</h3><p>Cut the best 30 seconds from a long video and crop it to 9:16 in one step.</p></article>
+        <article class="card"><h3>Podcasts and talks</h3><p>Save a quote or a segment as an MP3 without downloading a two-hour episode.</p></article>
+        <article class="card"><h3>Lectures and tutorials</h3><p>Keep just the part you need to revise, and skip the rest.</p></article>
+        <article class="card"><h3>Highlights and memories</h3><p>Grab the goal, the speech or the song from a long stream or recording.</p></article>
+      </div>
+    </section>
+
     <!-- ============ How it works ============ -->
     <section id="how" class="wrap section">
       <h2>How it works</h2>
@@ -127,6 +181,11 @@
       <div class="dl-head">
         <h2>Download Trimly</h2>
         <p class="muted">Latest build <b class="ver" data-version>…</b> <span class="muted" data-date></span></p>
+      </div>
+
+      <div class="band">
+        <div><b>Prefer not to install anything?</b><div class="muted">Open Trimly in your browser. You'll be asked for an access key.</div></div>
+        <a class="btn" data-webapp href="#ways">Use it online</a>
       </div>
 
       <div class="dl-grid">
@@ -180,6 +239,9 @@
     <section id="faq" class="wrap section narrow">
       <h2>Questions</h2>
       <details><summary>Is Trimly free?</summary><p>Yes. It's open source and free to use. The code is on <a data-repo href="#">GitHub</a>.</p></details>
+      <details><summary>What's the difference between the app and the online version?</summary><p>They look and work the same. The app does everything on your computer and saves to a folder. The online version does the work on the Trimly server and then gives you the finished file to download. Online is handy when you can't install apps, but the server limits clip length and is shared.</p></details>
+      <details><summary>Why does the online version ask for a key?</summary><p>Every clip uses the server's time and bandwidth, so access is limited to people who have a key. If you don't have one, the desktop app needs no key at all, or you can <a data-issues href="#" rel="noopener">ask on GitHub</a>.</p></details>
+      <details><summary>What happens to my clips online?</summary><p>The server keeps a finished clip for a short time, about an hour or two, so you can download it, then deletes it. The desktop app never sends anything anywhere: clips go straight to your folder.</p></details>
       <details><summary>Does it download the whole video first?</summary><p>No. Trimly asks the server for only the time range you chose, so a thirty-second clip from a two-hour video downloads about thirty seconds of data.</p></details>
       <details><summary>Which sites work?</summary><p>YouTube, Vimeo, Twitch, X and more than a thousand others, because Trimly is built on yt-dlp. Private or age-restricted videos can work if you let Trimly use your browser's sign-in in Settings.</p></details>
       <details><summary>Why do cropped clips take a little longer?</summary><p>Cropping re-encodes the video. Trimly does it in parts at the same time, so it stays quick.</p></details>
@@ -188,14 +250,17 @@
 
     <section class="wrap section final">
       <h2>Ready to clip?</h2>
-      <a class="btn primary big" href="#download">Download Trimly</a>
+      <div class="cta" style="justify-content: center">
+        <a class="btn primary big" href="#download">Download Trimly</a>
+        <a class="btn big" data-webapp href="#ways">Use it online</a>
+      </div>
     </section>
   </main>
 
   <footer class="foot">
     <div class="wrap">
       <span>© <span id="year">2026</span> Trimly</span>
-      <span><a data-repo href="#">GitHub</a> · <a data-all-releases href="#">Releases</a></span>
+      <span><a data-webapp href="#ways">Web app</a> · <a data-repo href="#">GitHub</a> · <a data-all-releases href="#">Releases</a> · <a href="https://buymeacoffee.com/joshuapavan" rel="noopener">Buy me a coffee</a></span>
     </div>
   </footer>
 

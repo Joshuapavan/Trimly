@@ -152,3 +152,22 @@ details p { margin-top: 10px; color: var(--muted); }
 
 .foot { border-top: 1px solid var(--line); padding: 28px 0; color: var(--muted); font-size: 14px; }
 .foot .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+/* two ways to use it */
+.sect-lead { margin: -16px 0 28px; color: var(--muted); font-size: 18px; max-width: 40em; }
+.ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 800px) { .ways { grid-template-columns: minmax(0, 1fr); } }
+.way { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+.way.best { border: 2px solid var(--accent); padding: 25px; }
+.way h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.way .btn { align-self: flex-start; margin-top: auto; }
+.badge { position: absolute; top: -12px; left: 22px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 999px; }
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
+.ticks li { position: relative; padding-left: 26px; }
+.ticks li::before { content: ''; position: absolute; left: 3px; top: 0.45em; width: 11px; height: 6px; border-left: 2.5px solid var(--accent); border-bottom: 2.5px solid var(--accent); transform: rotate(-45deg); }
+.way-note { font-size: 14px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 16px 20px; margin-bottom: 18px; border: 1px dashed var(--line-strong); border-radius: 14px; }
+.caption-note { margin-top: 6px; font-size: 13px; color: var(--muted); }
+nav a.navcta.alt { background: var(--accent); color: #fff; margin-left: 4px; }
+nav a.navcta.alt:hover { background: var(--accent); filter: brightness(1.08); opacity: 1; }
+[hidden] { display: none !important; }

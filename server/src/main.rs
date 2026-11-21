@@ -589,6 +589,16 @@ fn spawn_cleanup(app: Shared) {
 
 // ------------------------------------------------------------------ main
 
+/// The addresses allowed by TRIMLY_ALLOW_ORIGIN. A browser's origin never ends
+/// in a slash, so a trailing one (an easy mistake to type) is ignored.
+fn parse_origins(list: &str) -> Vec<HeaderValue> {
+    list.split(',')
+        .map(|o| o.trim().trim_end_matches('/'))
+        .filter(|o| !o.is_empty())
+        .filter_map(|o| HeaderValue::from_str(o).ok())
+        .collect()
+}
+
 fn router(app: Shared) -> Router {
     let api = Router::new()
         .route("/api/health", get(health))
@@ -610,7 +620,7 @@ fn router(app: Shared) -> Router {
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
         .allow_origin(match origins.as_deref() {
             None | Some("*") => AllowOrigin::any(),
-            Some(list) => AllowOrigin::list(list.split(',').filter_map(|o| HeaderValue::from_str(o.trim()).ok())),
+            Some(list) => AllowOrigin::list(parse_origins(list)),
         });
 
     let mut router = api.with_state(app).layer(cors);
@@ -681,6 +691,15 @@ mod tests {
         assert!(check_link(&cfg, "file:///etc/passwd").is_err());
         assert!(check_link(&cfg, "http://127.0.0.1:8080/x").is_err());
         assert!(check_link(&cfg, "http://169.254.169.254/latest/meta-data").is_err());
+    }
+
+    #[test]
+    fn allowed_origins_ignore_trailing_slashes_and_spaces() {
+        let got: Vec<String> = parse_origins(" https://a.example/ , https://b.example,, ")
+            .iter()
+            .map(|v| v.to_str().unwrap().to_string())
+            .collect();
+        assert_eq!(got, vec!["https://a.example", "https://b.example"]);
     }
 
     #[test]

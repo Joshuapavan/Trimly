@@ -50,12 +50,17 @@ jobs:
           fi
 
       # Point the download buttons at this repository's releases.
-      - name: Set the repository for the download buttons
+      # Set the repository variable TRIMLY_WEB_APP to change the "Use online" address.
+      - name: Write the site settings
         if: steps.pages.outputs.enabled == 'true'
         env:
           REPO: ${{ github.repository }}
+          WEB_APP: ${{ vars.TRIMLY_WEB_APP || 'https://trimly-clipy.vercel.app' }}
         run: |
-          printf "window.TRIMLY_REPO = '%s';\n" "$REPO" > website/config.js
+          # Only plain https addresses are accepted, so nothing odd can end up in the script.
+          if ! printf '%s' "$WEB_APP" | grep -Eq '^https://[A-Za-z0-9._:/-]+$'; then WEB_APP=""; fi
+          printf "window.TRIMLY_REPO = '%s';\nwindow.TRIMLY_WEB_APP = '%s';\n" "$REPO" "$WEB_APP" > website/config.js
+          cat website/config.js
 
       - uses: actions/configure-pages@v5
         if: steps.pages.outputs.enabled == 'true'

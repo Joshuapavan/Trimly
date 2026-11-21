@@ -112,7 +112,22 @@
     if (row) row.classList.add('mine');
   }
 
+  // The "online" buttons open the web app (set in config.js). Without one they are hidden.
+  function hydrateWebApp() {
+    const app = (window.TRIMLY_WEB_APP || '').trim();
+    $$('[data-webapp]').forEach((el) => {
+      if (/^https:\/\//i.test(app)) {
+        el.href = app;
+        el.rel = 'noopener';
+      } else {
+        el.hidden = true;
+      }
+    });
+    $$('[data-issues]').forEach((el) => (el.href = `https://github.com/${REPO}/issues`));
+  }
+
   async function main() {
+    hydrateWebApp();
     const me = await detect();
     $$('[data-os-only]').forEach((el) => (el.hidden = el.dataset.osOnly !== me.os));
     let release = null;
