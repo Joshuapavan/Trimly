@@ -273,3 +273,30 @@ nav a.navcta.alt:hover { background: var(--accent); filter: brightness(1.08); op
 .qr img { display: block; border-radius: 12px; background: #fff; border: 1px solid var(--line); padding: 6px; }
 .qr figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .cup, .cup .steam { animation: none !important; } .cup .steam { opacity: 0.6; } }
+
+/* header on small screens: keep every button on one line and inside the screen */
+.bar { min-width: 0; }
+.brand { flex: none; }
+nav { flex-wrap: nowrap; min-width: 0; }
+nav a { white-space: nowrap; display: inline-flex; align-items: center; }
+.iconbtn { flex: none; }
+@media (max-width: 640px) {
+  .bar { gap: 8px; }
+  nav { gap: 4px; }
+  nav a.navcta { padding: 8px 12px; font-size: 14px; line-height: 1.2; }
+  nav a.navcta.alt { margin-left: 0; }
+  .iconbtn { width: 36px; height: 36px; }
+}
+@media (max-width: 420px) {
+  .brand-name { display: none; }
+}
+
+/* install commands: let the row shrink to the screen; long commands scroll inside their box */
+.cmds { grid-template-columns: minmax(0, 1fr); }
+.cmd { min-width: 0; }
+@media (max-width: 520px) {
+  .cmd { flex-wrap: wrap; gap: 6px 10px; padding: 10px; }
+  .cmd b { width: auto; }
+  .cmd code { flex: 1 1 100%; order: 3; padding: 8px 10px; background: var(--surface); border-radius: 8px; }
+  .cmd button { margin-left: auto; }
+}
