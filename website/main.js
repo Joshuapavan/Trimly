@@ -116,7 +116,7 @@
   function hydrateWebApp() {
     const app = (window.TRIMLY_WEB_APP || '').trim();
     $$('[data-webapp]').forEach((el) => {
-      if (/^https:\/\//i.test(app)) {
+      if (/^(https:\/\/|\/(?!\/))/i.test(app)) {
         el.href = app;
         el.rel = 'noopener';
       } else {

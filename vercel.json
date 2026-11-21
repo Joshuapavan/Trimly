@@ -2,12 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "npm run build:web",
-  "outputDirectory": "dist/trimly/browser",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist/vercel",
+  "rewrites": [
+    { "source": "/app", "destination": "/app/index.html" },
+    { "source": "/app/(.*)", "destination": "/app/index.html" }
+  ],
   "headers": [
     {
       "source": "/config.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/app/config.js",
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     }
   ]

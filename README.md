@@ -136,6 +136,8 @@ Vercel hosts the web app (static files). It **can't run the server**: its functi
 2. In Vercel, import this repository. [`vercel.json`](vercel.json) already sets the install, build and output settings.
 3. Under **Settings → Environment Variables**, add `TRIMLY_API_URL` with the address from step 1 (no trailing slash), then deploy. The build writes it into `config.js`.
 
+When it's deployed, the website is at your Vercel address and the web app is at `/app/`.
+
 #### Example: the server on Fly.io
 
 [`fly.toml`](fly.toml) is ready to use. It builds the image from the Dockerfile, keeps one machine always running (clips in progress live in its memory), and puts clips on a volume.
@@ -180,7 +182,7 @@ Preview it locally:
 python3 -m http.server 4300 --directory website
 ```
 
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys it to GitHub Pages whenever `website/` changes on `main`, and points the buttons at the repository it runs in. One-time setup: in the repository, open **Settings → Pages** and set **Source** to **GitHub Actions**. The default repository name in [`website/config.js`](website/config.js) is only used when previewing locally.
+On Vercel, one project serves both: the download website at the main address and the web app under `/app/` (for example `https://your-project.vercel.app/app/`). `npm run build:vercel` (set in [`vercel.json`](vercel.json)) builds them together. The website's "Use online" buttons open the web app, and its download buttons read your latest GitHub release.
 
 ## Troubleshooting
 

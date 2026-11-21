@@ -9,7 +9,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:web": "ng build && node scripts/write-web-config.mjs",
-    "start:web": "ng serve --proxy-config proxy.conf.json"
+    "start:web": "ng serve --proxy-config proxy.conf.json",
+    "build:vercel": "node scripts/build-vercel.mjs"
   },
   "private": true,
   "packageManager": "npm@12.2.2",
